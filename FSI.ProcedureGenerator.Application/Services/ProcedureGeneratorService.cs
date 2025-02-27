@@ -22,12 +22,14 @@ namespace FSI.ProcedureGenerator.Application.Services
         public string GenerateCreateTableScript(Type entityType)
         {
             string tableName = entityType.Name;
-
             StringBuilder sql = new StringBuilder();
+
             sql.AppendLine($"CREATE TABLE {tableName} (");
 
             var properties = entityType.GetProperties();
-            var columns = properties.Select(p => $"    {p.Name} {SqlTypeMapper.GetSqlType(p.PropertyType)}");
+            var columns = properties.Select(p =>
+                $"    {p.Name} {SqlTypeMapper.GetSqlType(p.PropertyType)} {SqlTypeMapper.GetSqlNullability(p.PropertyType)}"
+            );
             sql.AppendLine(string.Join(",\n", columns));
 
             sql.AppendLine("    PRIMARY KEY (Id)");
@@ -39,16 +41,19 @@ namespace FSI.ProcedureGenerator.Application.Services
         public string GenerateInsertProcedure(Type entityType)
         {
             string tableName = entityType.Name;
-
+            var properties = entityType.GetProperties();
             StringBuilder sql = new StringBuilder();
-            sql.AppendLine($"CREATE PROCEDURE SP_{tableName}_Post");
+
+            sql.AppendLine($"CREATE PROCEDURE SP_{tableName}_Insert");
             sql.AppendLine("(");
-            sql.AppendLine(string.Join(",\n", entityType.GetProperties().Select(p => $"    @{p.Name} {SqlTypeMapper.GetSqlType(p.PropertyType)}")));
+            sql.AppendLine(string.Join(",\n", properties.Select(p =>
+                $"    @{p.Name} {SqlTypeMapper.GetSqlType(p.PropertyType)} {SqlTypeMapper.GetSqlNullability(p.PropertyType)}"
+            )));
             sql.AppendLine(")");
             sql.AppendLine("AS");
             sql.AppendLine("BEGIN");
-            sql.AppendLine($"    INSERT INTO {tableName} ({string.Join(", ", entityType.GetProperties().Select(p => p.Name))})");
-            sql.AppendLine($"    VALUES ({string.Join(", ", entityType.GetProperties().Select(p => "@" + p.Name))});");
+            sql.AppendLine($"    INSERT INTO {tableName} ({string.Join(", ", properties.Select(p => p.Name))})");
+            sql.AppendLine($"    VALUES ({string.Join(", ", properties.Select(p => "@" + p.Name))});");
             sql.AppendLine("END");
 
             return sql.ToString();
@@ -57,18 +62,19 @@ namespace FSI.ProcedureGenerator.Application.Services
         public string GenerateUpdateProcedure(Type entityType)
         {
             string tableName = entityType.Name;
-            PropertyInfo[] properties = entityType.GetProperties().Where(p => p.Name != "Id" && p.Name != "CreatedAt" && p.Name != "CreatedId").ToArray();
-            string setClause = string.Join(", ", properties.Select(p => $"{p.Name} = @{p.Name}"));
-
+            var properties = entityType.GetProperties().Where(p => p.Name != "Id").ToList();
             StringBuilder sql = new StringBuilder();
-            sql.AppendLine($"CREATE PROCEDURE SP_{tableName}_Put");
+
+            sql.AppendLine($"CREATE PROCEDURE SP_{tableName}_Update");
             sql.AppendLine("(");
-            sql.AppendLine(string.Join(",\n", properties.Select(p => $"    @{p.Name} {SqlTypeMapper.GetSqlType(p.PropertyType)}")));
-            sql.AppendLine("    @Id BIGINT");
+            sql.AppendLine(string.Join(",\n", properties.Select(p =>
+                $"    @{p.Name} {SqlTypeMapper.GetSqlType(p.PropertyType)} {SqlTypeMapper.GetSqlNullability(p.PropertyType)}"
+            )));
+            sql.AppendLine("    @Id BIGINT NOT NULL");
             sql.AppendLine(")");
             sql.AppendLine("AS");
             sql.AppendLine("BEGIN");
-            sql.AppendLine($"    UPDATE {tableName} SET {setClause}, UpdateAt = GETDATE(), UpdateId = @UpdateId WHERE Id = @Id;");
+            sql.AppendLine($"    UPDATE {tableName} SET {string.Join(", ", properties.Select(p => $"{p.Name} = @{p.Name}"))} WHERE Id = @Id;");
             sql.AppendLine("END");
 
             return sql.ToString();
@@ -77,8 +83,8 @@ namespace FSI.ProcedureGenerator.Application.Services
         public string GenerateSoftDeleteProcedure(Type entityType)
         {
             string tableName = entityType.Name;
-
             StringBuilder sql = new StringBuilder();
+
             sql.AppendLine($"CREATE PROCEDURE SP_{tableName}_Delete");
             sql.AppendLine("(");
             sql.AppendLine("    @Id BIGINT,");
@@ -95,9 +101,9 @@ namespace FSI.ProcedureGenerator.Application.Services
         public string GenerateSelectProcedure(Type entityType)
         {
             string tableName = entityType.Name;
-
             StringBuilder sql = new StringBuilder();
-            sql.AppendLine($"CREATE PROCEDURE SP_{tableName}_Get");
+
+            sql.AppendLine($"CREATE PROCEDURE SP_{tableName}_Select");
             sql.AppendLine("AS");
             sql.AppendLine("BEGIN");
             sql.AppendLine($"    SELECT * FROM {tableName} WHERE IsActive = 1;");
@@ -109,8 +115,8 @@ namespace FSI.ProcedureGenerator.Application.Services
         public string GenerateGetByIdProcedure(Type entityType)
         {
             string tableName = entityType.Name;
-
             StringBuilder sql = new StringBuilder();
+
             sql.AppendLine($"CREATE PROCEDURE SP_{tableName}_GetById");
             sql.AppendLine("(");
             sql.AppendLine("    @Id BIGINT");
@@ -126,8 +132,8 @@ namespace FSI.ProcedureGenerator.Application.Services
         public string GenerateExistsByIdProcedure(Type entityType)
         {
             string tableName = entityType.Name;
-
             StringBuilder sql = new StringBuilder();
+
             sql.AppendLine($"CREATE PROCEDURE SP_{tableName}_ExistsById");
             sql.AppendLine("(");
             sql.AppendLine("    @Id BIGINT,");
@@ -164,8 +170,8 @@ namespace FSI.ProcedureGenerator.Application.Services
             string tableName = entityType.Name;
             string propertyName = property.Name;
             string sqlType = SqlTypeMapper.GetSqlType(property.PropertyType);
-
             StringBuilder sql = new StringBuilder();
+
             sql.AppendLine($"CREATE PROCEDURE SP_{tableName}_ExistsBy_{propertyName}");
             sql.AppendLine("(");
             sql.AppendLine($"    @{propertyName} {sqlType},");
@@ -187,8 +193,8 @@ namespace FSI.ProcedureGenerator.Application.Services
             string tableName = entityType.Name;
             string propertyName = property.Name;
             string sqlType = SqlTypeMapper.GetSqlType(property.PropertyType);
-
             StringBuilder sql = new StringBuilder();
+
             sql.AppendLine($"CREATE PROCEDURE SP_{tableName}_GetBy_{propertyName}");
             sql.AppendLine("(");
             sql.AppendLine($"    @{propertyName} {sqlType}");

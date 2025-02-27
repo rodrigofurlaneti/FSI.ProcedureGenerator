@@ -4,7 +4,7 @@
     {
         public int AmsRecordId { get; set; } // Identificador do Registro AMS
         public int ReportNumber { get; set; } // 1 Número do RPE
-        public string ReferenceAirport { get; set; } = string.Empty;// 2 Aeroporto de Referência
+        public string? ReferenceAirport { get; set; } = string.Empty;// 2 Aeroporto de Referência
         public string AircraftRegistration { get; set; } = string.Empty;// 3 Matrícula da Aeronave
         public string OperatorCode { get; set; } = string.Empty;// 4 Código da Empresa Aérea
         public string FlightNumberDeparture { get; set; } = string.Empty;// 5 Número do Voo de Decolagem

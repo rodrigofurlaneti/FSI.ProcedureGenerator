@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace FSI.ProcedureGenerator.Domain.Interfaces
 {
